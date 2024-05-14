@@ -100,7 +100,7 @@ def Optimized_params_Gaussian(y, regularization, initial_guesses= np.array([0.00
 def SD_Normalization_Student(y, y_train, mode='predict', norm_strength=[0.5, 0.5], degrees_freedom=100):
 
     nu = degrees_freedom
-    alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, mu_0, sigma2_0 = Optimized_params_Student(y_train, norm_strength, nu)
+    alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, mu_0, sigma2_0 = Optimized_params_Student(y_train, norm_strength, nu, initial_guesses= np.array([0.001, 0.001, 0.5, 0.5, np.mean(y_train), np.var(y_train), np.mean(y_train), np.var(y_train)]))
     
     T = len(y)
     mu_list, sigma2_list = np.zeros(T), np.ones(T)
@@ -132,7 +132,7 @@ def Update_function_Student(y_t, mu_t, sigma2_t, alpha_mu, alpha_sigma, beta_mu,
     
     mu_updated= mu_t + ((norm_strength[0]) / (1 - norm_strength[0])) * alpha_mu * (y_t - mu_t) / (1 + (y_t - mu_t) ** 2 / (nu * sigma2_t))
     mu_updated = omega_mu + beta_mu * mu_updated
-    sigma2_updated= sigma2_t + ((norm_strength[1]) / (1 - norm_strength[1])) * alpha_sigma*((nu + 1) * (y_t - mu_t)**2 / (nu +  (y_t - mu_t)**2 / sigma2_t)  - sigma2_t)
+    sigma2_updated = sigma2_t + ((norm_strength[1]) / (1 - norm_strength[1])) * alpha_sigma*((nu + 1) * (y_t - mu_t)**2 / (nu +  (y_t - mu_t)**2 / sigma2_t)  - sigma2_t)
     sigma2_updated = omega_sigma + beta_sigma * sigma2_updated
 
     return mu_updated, sigma2_updated
@@ -173,8 +173,8 @@ def Optimized_params_Student(y, norm_strength, nu, initial_guesses= np.array([0.
 
     #The bounds are defined to avoid negative intial variance and learning rates outside the interval (0,1)
     bounds = ((0, 1), (0, 1), (0, 1), (0, 1), (None, None), (0.000001, None), (None, None), (0.000001, None))
-    optimal = minimize(lambda params: neg_log_likelihood_Student(params, y, norm_strength, nu), x0=initial_guesses, bounds=bounds, options={'maxiter': 1000}, method='Powell')
+    optimal = minimize(lambda params: neg_log_likelihood_Student(params, y, norm_strength, nu), x0=initial_guesses, bounds=bounds, options={'maxiter': 10000}, method='Powell')
     
     alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, mu_0, sigma2_0 = optimal.x
-    print('Optimal parameters:  alpha_mu = {},  alpha_sigma = {}, mu_0 = {}, sigma2_0 = {}, beta_mu = {}, beta_sigma = {}, omega_mu = {}, omega_sigma = {}'.format(alpha_mu, alpha_sigma, mu_0, sigma2_0, beta_mu, beta_sigma, omega_mu, omega_sigma))
+    print('Optimal parameters:  alpha_mu = {},  alpha_sigma = {}, beta_mu = {}, beta_sigma = {}, omega_mu = {}, omega_sigma = {}, mu_0 = {}, sigma2_0 = {}'.format(alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, mu_0, sigma2_0))
     return alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, mu_0, sigma2_0
