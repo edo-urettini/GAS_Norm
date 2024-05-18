@@ -1,26 +1,16 @@
 import subprocess
-import os
-import sys
 
-
-def run_experiment(script_name, args):
-    """Run a python script with given arguments."""
-    command = [sys.executable, script_name] + args  # Use sys.executable for the correct Python interpreter
-    env = os.environ.copy()
-    env['PYTHONPATH'] = os.pathsep.join([os.path.abspath(os.path.dirname(__file__)), env.get('PYTHONPATH', '')])
-    print(f"Running {' '.join(command)} with PYTHONPATH={env['PYTHONPATH']}")
-    subprocess.run(command, env=env)
-
-def main():
-    # Define the list of experiments with corresponding arguments
-    experiments = [
-        (".\models\RecurrentNetwork_SAN.py", []),
-        # Add more experiments or scripts as needed
-    ]
-
-    # Run experiments
-    for script, args in experiments:
-        run_experiment(script, args)
+def run_experiment(command):
+    full_command = ["python", "run_experiment.py"] + command.split()
+    subprocess.run(full_command)
 
 if __name__ == "__main__":
-    main()
+    "arguments: --data_choice --use_gas_normalization  --use_batch_norm --use_revin --normalizer_choice --degrees_freedom --batch_size --max_encoder_length --max_prediction_length --num_trials"
+    experiment_commands = [
+        "--data_choice AR --normalizer_choice EncoderNormalizer() --num_trials 1",
+        "--data_choice VIX --use_gas_normalization True --num_trials 1 --degrees_freedom 20",
+        # Add more experiment commands as needed
+    ]
+
+    for command in experiment_commands:
+        run_experiment(command)

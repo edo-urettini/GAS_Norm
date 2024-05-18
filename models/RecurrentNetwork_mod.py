@@ -5,7 +5,7 @@ from pytorch_forecasting.models.nn import HiddenState
 import torch
 from typing import Dict, Tuple
 import torch.nn as nn
-from GAS_norm import Update_function_Student
+from normalizers.GAS_norm import Update_function_Student
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Callable
 from pytorch_forecasting.utils import apply_to_list, to_list
 from pytorch_forecasting.metrics import (
@@ -19,7 +19,7 @@ from pytorch_forecasting.metrics import (
     convert_torchmetric_to_pytorch_forecasting_metric,
 )
 from pytorch_forecasting.metrics.base_metrics import Metric
-from RevIN import RevIN
+from normalizers.RevIN import RevIN
 
 class RecurrentNetwork_mod(RecurrentNetwork):
     def __init__(self, use_batch_norm, use_revin, **kwargs):

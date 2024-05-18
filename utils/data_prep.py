@@ -5,6 +5,7 @@ from pytorch_forecasting.data import TorchNormalizer
 import matplotlib.pyplot as plt
 from normalizers.GAS_norm import SD_Normalization_Student
 import numpy as np
+import yfinance as yf
 
 def data_generation(args):
 
@@ -17,20 +18,18 @@ def data_generation(args):
         ar_data = ar_data.astype(dict(series=str))
         data = ar_data
 
-    if data_name == 'VIX':        
+    elif data_name == 'VIX':        
         #Download the VIX index from yahoo finance
-        import yfinance as yf
+        
 
         vix = yf.download("^VIX")
 
         #Compute the returns of the VIX index
         vix['Adj Close'] = vix['Adj Close'].diff()
-        vix = vix.dropna()
+        vix = vix.dropna().reset_index()
 
 
         #Construct Pandas dataframe with the VIX index, the Date, a time index starting from 0 and a series column to identify the series
-
-        vix = vix.reset_index()
         vix['time_idx'] = vix.index
         vix['series'] = 0
         #Change column name
@@ -40,11 +39,11 @@ def data_generation(args):
         data = vix
 
 
-    if data_name == 'ECL':
+    elif data_name == 'ECL':
         #ECL data
 
         #load the data
-        ecl_data = pd.read_csv(".\datasets\ECL.txt", sep = ";")
+        ecl_data = pd.read_csv("./datasets/ECL.txt", sep = ";")
 
         #Transform the first column into a datetime object
         ecl_data["date"] = pd.to_datetime(ecl_data.iloc[:,0])
@@ -64,14 +63,18 @@ def data_generation(args):
         ecl_data.drop(['MT_001'], axis = 1, inplace = True)
         data = ecl_data
 
+    else:
+        raise ValueError(f"Unknown data_choice: {data_name}")
+
     return data
 
 
 
-def prepare_dataset(data, use_gas_normalization, args, norm_strength=None, degrees_freedom=None):
+def prepare_dataset(data, use_gas_normalization, args, norm_strength=None):
     max_prediction_length = args.max_prediction_length
     max_encoder_length = args.max_encoder_length
     normalizer_choice = args.normalizer_choice
+    degrees_freedom = args.degrees_freedom
 
     # Define cutoffs for training, validation, and test sets (10% validation, 20% test)
     total_length = len(data)
@@ -92,39 +95,16 @@ def prepare_dataset(data, use_gas_normalization, args, norm_strength=None, degre
         #Add norm_strength to gas_params
         gas_params = alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, nu, norm_strength
 
-        # Plot the normalized data
-        plt.plot(data['time_idx'][1:], y_norm[1:])
-        plt.xlabel('Time (s)')
-        plt.ylabel('Amplitude')
-        plt.title('Normalized data')
-        plt.show()
-
-        # Plot the original data with the predicted mean and 95% variability interval
-        plt.plot(data['time_idx'], data['value'], label='Original data')
-        plt.plot(data['time_idx'], mu_list, label='Predicted mean')
-        plt.fill_between(data['time_idx'], mu_list-1.96*np.sqrt(sigma2_list), mu_list+1.96*np.sqrt(sigma2_list), alpha=0.5, label='95% variability interval', color='orange')
-        plt.xlabel('Time (s)')
-        plt.ylabel('Amplitude')
-        plt.title('Original data with predicted mean and 95% variability interval')
-        plt.legend()
-        plt.show()
 
     else:
         # Use other normalization method
         gas_params = []
         target_normalizer = normalizer_choice
 
-        # Plot original data
-        plt.plot(data['time_idx'], data['value'], label='Original data')
-        plt.xlabel('Time (s)')
-        plt.ylabel('Amplitude')
-        plt.title('Original data')
-        plt.legend()
-        plt.show()
 
     # Create datasets and dataloaders
     training = TimeSeriesDataSet(
-        data[lambda x: x.time_idx <= validation_cutoff],
+        data[data.time_idx <= validation_cutoff],
         time_idx="time_idx",
         target="value",
         group_ids=["series"],
@@ -136,7 +116,7 @@ def prepare_dataset(data, use_gas_normalization, args, norm_strength=None, degre
         target_normalizer=target_normalizer
     )
     
-    validation = TimeSeriesDataSet.from_dataset(training, data[lambda x: x.time_idx <= test_cutoff], min_prediction_idx=validation_cutoff + 1)
+    validation = TimeSeriesDataSet.from_dataset(training, data[data.time_idx <= test_cutoff], min_prediction_idx=validation_cutoff + 1)
     test = TimeSeriesDataSet.from_dataset(training, data, min_prediction_idx=test_cutoff + 1)
 
     

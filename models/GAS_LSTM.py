@@ -5,7 +5,7 @@ from pytorch_forecasting.models.nn import HiddenState
 import torch
 from typing import Dict, Tuple
 import torch.nn as nn
-from GAS_norm import Update_function_Student
+from normalizers.GAS_norm import Update_function_Student
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Callable
 from pytorch_forecasting.utils import apply_to_list, to_list
 from pytorch_forecasting.metrics import (
