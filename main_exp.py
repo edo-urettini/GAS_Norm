@@ -1,6 +1,6 @@
-import pytorch_lightning as pl
+import lightning.pytorch as pl
+from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.tuner import Tuner
-from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_forecasting import Baseline, TimeSeriesDataSet
 from pytorch_forecasting.data import NaNLabelEncoder, TorchNormalizer, EncoderNormalizer
 from pytorch_forecasting.data.examples import generate_ar_data
@@ -38,9 +38,9 @@ def hyperoptimization(data, args, trials_args):
         monitor="val_loss", filename="hyper_optim", mode="min", save_top_k=1
     )
 
-    def prepare_and_train(norm_strngth=None):
+    def prepare_and_train(norm_strength=None):
         training, validation, test, gas_params = prepare_dataset(
-                data, use_gas_normalization=use_gas_normalization, gas_norm_strength=norm_strength
+                data, use_gas_normalization=use_gas_normalization, args=args, norm_strength=norm_strength
             )
         train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=0, shuffle=False)
         val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=0, shuffle=False)
@@ -49,7 +49,9 @@ def hyperoptimization(data, args, trials_args):
         if not os.path.exists(trial_dir):
             os.makedirs(trial_dir)
         
-        trainer = pl.Trainer(default_root_dir=trial_dir)  
+        trainer = pl.Trainer(default_root_dir=trial_dir, logger=False, enable_checkpointing=False)  
+
+        print(trainer.log_dir)
 
         if use_gas_normalization:
             net = GAS_LSTM.from_dataset(
@@ -93,6 +95,8 @@ def hyperoptimization(data, args, trials_args):
             callbacks=[checkpoint_callback],
             enable_checkpointing=True,
             default_root_dir=trial_dir,
+            log_every_n_steps=10,
+            logger=False,
         )
         trainer.fit(net, train_dataloader, val_dataloader)
 
@@ -141,7 +145,7 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
 
     if use_gas_normalization:
         training, validation, test, gas_params = prepare_dataset(
-            data, use_gas_normalization=use_gas_normalization, args=args, gas_norm_strength=best_norm_strength, 
+            data, use_gas_normalization=use_gas_normalization, args=args, norm_strength=best_norm_strength, 
         )
     else:
         training, validation, test, _ = prepare_dataset(
@@ -157,7 +161,7 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
     #At the end of each training, we save the model with the best performance on the validation set
     #The best model is then tested on the test set and the performance is saved for later analysis
     
-    results = np.zeros(num_trials)
+    results = []
 
     for trial in range(num_trials):
 
@@ -177,12 +181,13 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=3, verbose=False, mode="min")
 
         trainer = pl.Trainer(
-        max_epochs=10,
-        enable_model_summary=True,
-        callbacks=[early_stop_callback, checkpoint_callback],
-        enable_checkpointing=True,
-        default_root_dir=trial_dir,
-        )
+            max_epochs=10,
+            enable_model_summary=True,
+            callbacks=[early_stop_callback, checkpoint_callback],
+            enable_checkpointing=True,
+            default_root_dir=trial_dir,
+            log_every_n_steps=10,
+            )
         #Init model
         if use_gas_normalization:
             
@@ -223,8 +228,12 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
         )
 
         
+        if use_gas_normalization:
         #Load best model
-        net = net.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
+            net = GAS_LSTM.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
+        else:
+            net = RecurrentNetwork_mod.load_from_checkpoint(trainer.checkpoint_callback.best_model_path)
+
         print(f"Best model on validation set: {trainer.checkpoint_callback.best_model_path}")
       
 
@@ -236,7 +245,7 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
         )
 
         #Save results
-        results[trial] = result[0]['test_loss'], result[0]['test_MASE']
+        results.append({'test_loss': result[0]['test_loss'], 'test_MASE': result[0]['test_MASE']})
 
     #Print results
     print('Results: ', results)
@@ -249,7 +258,8 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
 
 def main(args):    
     pl.seed_everything(42, workers=True)
-    trials_args = f"gas_{args.use_gas_normalization}_batchnorm_{args.use_batch_norm}_revin_{args.use_revin}_normalizer_{args.normalizer_choice}_enc_{args.max_encoder_length}_dec_{args.max_prediction_length}_df_{args.degrees_freedom}"
+
+    trials_args = f"gas_{args.use_gas_normalization}_batchnorm_{args.use_batch_norm}_revin_{args.use_revin}_normalizer_{args.normalizer_choice.__class__.__name__}_enc_{args.max_encoder_length}_dec_{args.max_prediction_length}_df_{args.degrees_freedom}"
 
 
     # Generate data
@@ -269,7 +279,7 @@ def main(args):
     results_data = {
         "best_learning_rate": best_learning_rate,
         "best_norm_strength": best_norm_strength,
-        "results": results.tolist()  # convert numpy array to list for JSON serialization
+        "results": results
     }
 
     with open(result_file, "w") as f:

@@ -29,10 +29,11 @@ class AR_GAS(nn.Module):
         self.k = k
 
     def forward(self, last_mu, last_sigma2, gas_params):
+        device = last_mu.device
         alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, nu, norm_strength = gas_params
         #transform last_mu and last_sigma2 in numpy
-        last_mu = last_mu.detach().numpy()
-        last_sigma2 = last_sigma2.detach().numpy()
+        last_mu = last_mu.detach().cpu().numpy()
+        last_sigma2 = last_sigma2.detach().cpu().numpy()
 
         
         mu_pred = torch.zeros(self.k)
@@ -41,7 +42,7 @@ class AR_GAS(nn.Module):
         mu_pred[0], sigma2_pred[0] = Update_function_Student(last_mu, last_mu, last_sigma2, alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, nu, norm_strength)
         for i in range(1, self.k):
             mu_pred[i], sigma2_pred[i] = Update_function_Student(mu_pred[i-1], mu_pred[i-1], sigma2_pred[i-1], alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, nu, norm_strength)
-        return mu_pred, torch.sqrt(sigma2_pred)
+        return mu_pred.to(device), torch.sqrt(sigma2_pred).to(device)
     
 
 class GAS_LSTM(RecurrentNetwork):
@@ -180,7 +181,7 @@ class GAS_LSTM(RecurrentNetwork):
 
         #We predict the next k time steps means and variances with the GAS model for each batch
         #The final shape of the normalization parameters should be batch_size*k*(mean, std)
-        pred_norm_params = torch.zeros((x['decoder_cont'].shape[0], self.decoder_steps, 2))
+        pred_norm_params = torch.zeros((x['decoder_cont'].shape[0], self.decoder_steps, 2)).to(x['decoder_cont'].device)
         for i in range(x['decoder_cont'].shape[0]):
             pred_norm_params[i,:,0], pred_norm_params[i,:,1] = self.AR_GAS(last_mean[i], last_variance[i], self.gas_params)
 

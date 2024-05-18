@@ -1,0 +1,10 @@
+{
+    "best_learning_rate": 0.03981071705534971,
+    "best_norm_strength": null,
+    "results": [
+        {
+            "test_loss": 0.36342933773994446,
+            "test_MASE": 1.956893801689148
+        }
+    ]
+}
