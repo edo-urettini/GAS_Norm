@@ -97,10 +97,16 @@ def Optimized_params_Gaussian(y, regularization, initial_guesses= np.array([0.00
 
 #Score Driven Normalization Student-t
 #Note that the sigma2 needs a tranformation to be the correct variance of the Student distribution
-def SD_Normalization_Student(y, y_train, mode='predict', norm_strength=[0.5, 0.5], degrees_freedom=100):
-
+def SD_Normalization_Student(y, y_train, args, mode='predict', norm_strength=[0.5, 0.5], degrees_freedom=100):
+    gas_init_zero_one = args.gas_init_zero_one
     nu = degrees_freedom
-    alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, mu_0, sigma2_0 = Optimized_params_Student(y_train, norm_strength, nu, initial_guesses= np.array([0.001, 0.001, 0.5, 0.5, np.mean(y_train), np.var(y_train), np.mean(y_train), np.var(y_train)]))
+
+    if gas_init_zero_one:
+        initial_guesses = np.array([0.001, 0.001, 0.5, 0.5, 0, 1, 0, 1])
+    else:
+        initial_guesses = np.array([0.001, 0.001, 0.5, 0.5, np.mean(y_train), np.var(y_train), np.mean(y_train), np.var(y_train)])
+    print('initial_guesses:', initial_guesses)
+    alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, mu_0, sigma2_0 = Optimized_params_Student(y_train, norm_strength, nu, initial_guesses= initial_guesses)
     
     T = len(y)
     mu_list, sigma2_list = np.zeros(T), np.ones(T)

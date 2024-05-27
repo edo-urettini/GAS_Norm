@@ -25,5 +25,5 @@ def process_json_files(folder_path):
                 print(f"Mean Test MASE: {mean_mase:.4f}, Std Test MASE: {std_mase:.4f}\n")
 
 if __name__ == "__main__":
-    folder_path = 'experiments_results\ECL'  # Replace with the path to your folder containing JSON files
+    folder_path = 'experiments_results/ECL_bs_512'  # Replace with the path to your folder containing JSON files
     process_json_files(folder_path)

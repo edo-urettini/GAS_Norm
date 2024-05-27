@@ -42,26 +42,12 @@ def data_generation(args):
     elif data_name == 'ECL':
         #ECL data
 
-        #load the data
-        ecl_data = pd.read_csv("./datasets/ECL.txt", sep = ";")
+        #Load the data
+        ecl_small = pd.read_csv("./datasets/ecl_data_small.csv")
 
-        #Transform the first column into a datetime object
-        ecl_data["date"] = pd.to_datetime(ecl_data.iloc[:,0])
-
-        #Drop first column and Select the columns Date and MT_001
-        ecl_data = ecl_data.drop(ecl_data.columns[0], axis = 1)[['date', 'MT_001']]
-
-        #Change the commas to dots, transfrom to numeric and fill NaN with 0 in the column MT_001
-        ecl_data['value'] = ecl_data['MT_001'].str.replace(',','.').astype(float).fillna(0)
-
-        #Drop all the data before the first non-zero value of the column MT_001_new
-        ecl_data = ecl_data.drop(ecl_data.index[0: ecl_data['value'].ne(0).idxmax()])[0:10000]
-
-        ecl_data.reset_index(drop = True, inplace = True)
-        ecl_data['time_idx'] = ecl_data.index
-        ecl_data['series'] = 0
-        ecl_data.drop(['MT_001'], axis = 1, inplace = True)
-        data = ecl_data
+        #transform the date column to datetime
+        ecl_small["date"] = pd.to_datetime(ecl_small["date"])
+        data = ecl_small
 
     else:
         raise ValueError(f"Unknown data_choice: {data_name}")
@@ -84,8 +70,8 @@ def prepare_dataset(data, use_gas_normalization, args, norm_strength=None):
     if use_gas_normalization:
         # Perform GAS normalization
         mu_list, sigma2_list, y_norm, alpha_mu, alpha_sigma, beta_mu, beta_sigma, omega_mu, omega_sigma, nu = SD_Normalization_Student(
-            data['value'], data['value'][:validation_cutoff], mode='predict',
-            norm_strength=norm_strength, degrees_freedom=degrees_freedom
+            data['value'], data['value'][:validation_cutoff], args=args, mode='predict',
+            norm_strength=norm_strength, degrees_freedom=degrees_freedom, 
         )
         data['mu'] = mu_list
         data['sigma2'] = sigma2_list

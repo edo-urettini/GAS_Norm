@@ -42,14 +42,14 @@ def hyperoptimization(data, args, trials_args):
         training, validation, test, gas_params = prepare_dataset(
                 data, use_gas_normalization=use_gas_normalization, args=args, norm_strength=norm_strength
             )
-        train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=0, shuffle=False)
-        val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=0, shuffle=False)
+        train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=4, shuffle=False)
+        val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=4, shuffle=False)
 
         trial_dir = f"{experiment_logs_dir}/hyperopt_trial"
         if not os.path.exists(trial_dir):
             os.makedirs(trial_dir)
         
-        trainer = pl.Trainer(accelerator='cpu', default_root_dir=trial_dir, logger=False, enable_checkpointing=False, devices=1)  
+        trainer = pl.Trainer(default_root_dir=trial_dir, logger=False, enable_checkpointing=False, devices=1)  
 
         print(trainer.log_dir)
 
@@ -91,7 +91,6 @@ def hyperoptimization(data, args, trials_args):
 
         # Full training cycle
         trainer = pl.Trainer(
-            accelerator='cpu', 
             max_epochs=3,
             callbacks=[checkpoint_callback],
             enable_checkpointing=True,
@@ -154,9 +153,9 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
             data, use_gas_normalization=use_gas_normalization, args=args
         )
 
-    train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=0, shuffle=False)
-    val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=0, shuffle=False)
-    test_dataloader = test.to_dataloader(train=False, batch_size=batch_size, num_workers=0, shuffle=False)
+    train_dataloader = training.to_dataloader(train=True, batch_size=batch_size, num_workers=4, shuffle=False)
+    val_dataloader = validation.to_dataloader(train=False, batch_size=batch_size, num_workers=4, shuffle=False)
+    test_dataloader = test.to_dataloader(train=False, batch_size=batch_size, num_workers=4, shuffle=False)
         
 
     #We now repeat the training and test process n times to get a better estimate of the performance
@@ -183,7 +182,6 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=3, verbose=False, mode="min")
 
         trainer = pl.Trainer(
-            accelerator='cpu', 
             max_epochs=10,
             enable_model_summary=True,
             callbacks=[early_stop_callback, checkpoint_callback],
@@ -305,6 +303,7 @@ if __name__ == "__main__":
     parser.add_argument('--max_encoder_length', type=int, default=100, help='Maximum encoder length')
     parser.add_argument('--max_prediction_length', type=int, default=50, help='Maximum prediction length')
     parser.add_argument('--num_trials', type=int, default=5, help='Number of trials to run for training and testing')
+    parser.add_argument('--gas_init_zero_one', type=bool, default=False, help='Whether to use unconditional GAS initialization')
 
     args = parser.parse_args()
 
@@ -316,5 +315,6 @@ if __name__ == "__main__":
         args.normalizer_choice = "TorchNormalizer(method='identity', center=False)"
             
     args.normalizer_choice = eval(args.normalizer_choice)  # Convert string to function call
-
+    print(args.gas_init_zero_one)
+    
     main(args)
