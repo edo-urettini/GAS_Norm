@@ -1,0 +1,12 @@
+datasets/ECL.txt
+datasets/ecl_data_small.csv
+figs/3d_plot.pdf
+figs/ar_enc.pdf
+figs/ar_gas.pdf
+figs/ar_torch.pdf
+figs/Lorenz.pdf
+figs/Nonlinear_vs_Linear.pdf
+figs/strength_comparison.pdf
+figs/vix_enc.pdf
+figs/vix_gas.pdf
+figs/vix_torch.pdf

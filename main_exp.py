@@ -49,7 +49,7 @@ def hyperoptimization(data, args, trials_args):
         if not os.path.exists(trial_dir):
             os.makedirs(trial_dir)
         
-        trainer = pl.Trainer(default_root_dir=trial_dir, logger=False, enable_checkpointing=False)  
+        trainer = pl.Trainer(accelerator='cpu', default_root_dir=trial_dir, logger=False, enable_checkpointing=False, devices=1)  
 
         print(trainer.log_dir)
 
@@ -91,12 +91,14 @@ def hyperoptimization(data, args, trials_args):
 
         # Full training cycle
         trainer = pl.Trainer(
+            accelerator='cpu', 
             max_epochs=3,
             callbacks=[checkpoint_callback],
             enable_checkpointing=True,
             default_root_dir=trial_dir,
             log_every_n_steps=10,
             logger=False,
+            devices=1
         )
         trainer.fit(net, train_dataloader, val_dataloader)
 
@@ -181,12 +183,14 @@ def train_test(data, best_learning_rate, best_norm_strength, args, trials_args):
         early_stop_callback = EarlyStopping(monitor="val_loss", min_delta=1e-4, patience=3, verbose=False, mode="min")
 
         trainer = pl.Trainer(
+            accelerator='cpu', 
             max_epochs=10,
             enable_model_summary=True,
             callbacks=[early_stop_callback, checkpoint_callback],
             enable_checkpointing=True,
             default_root_dir=trial_dir,
             log_every_n_steps=10,
+            devices=1
             )
         #Init model
         if use_gas_normalization:

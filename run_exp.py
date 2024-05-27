@@ -12,7 +12,8 @@ if __name__ == "__main__":
     
     
     experiment_commands = [
-        "--data_choice AR --normalizer_choice EncoderNormalizer() --num_trials 1",
+        "--data_choice ECL --use_revin True --num_trials 5 --max_encoder_length 200",
+        
         # Add more experiment commands as needed
     ]
 
